@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  migr8-control-db:
+    image: postgres:16-alpine
+    container_name: migr8-control-db
+    environment:
+      POSTGRES_USER: migr8
+      POSTGRES_PASSWORD: migr8_dev_secret
+      POSTGRES_DB: migr8_control
+    ports:
+      - "5439:5432"
+    volumes:
+      - postgres_control_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U migr8 -d migr8_control"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migr8-redis:
+    image: redis:7-alpine
+    container_name: migr8-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migr8-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: migr8-api
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://migr8:migr8_dev_secret@migr8-control-db:5432/migr8_control
+      REDIS_URL: redis://migr8-redis:6379
+      APPROVAL_TOKEN_SECRET: migr8-super-secure-production-approval-token-secret-key-32-chars
+      APPROVAL_TOKEN_TTL_SECONDS: 120
+      ENABLE_DEMO_MODE: "true"
+    depends_on:
+      migr8-control-db:
+        condition: service_healthy
+      migr8-redis:
+        condition: service_healthy
+
+  migr8-policy:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.policy
+    container_name: migr8-policy
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      POLICY_PORT: 3002
+      DATABASE_URL: postgresql://migr8:migr8_dev_secret@migr8-control-db:5432/migr8_control
+      REDIS_URL: redis://migr8-redis:6379
+      APPROVAL_TOKEN_SECRET: migr8-super-secure-production-approval-token-secret-key-32-chars
+      APPROVAL_TOKEN_TTL_SECONDS: 120
+      ENABLE_DEMO_MODE: "true"
+    depends_on:
+      migr8-control-db:
+        condition: service_healthy
+
+volumes:
+  postgres_control_data:
+  redis_data:
