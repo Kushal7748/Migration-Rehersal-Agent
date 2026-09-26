@@ -14,13 +14,23 @@ async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${AUTH_TOKEN}`,
+    ...(options.headers as Record<string, string> ?? {}),
+  };
+
+  let body = options.body;
+  if (options.method && options.method !== "GET" && options.method !== "HEAD") {
+    headers["Content-Type"] = "application/json";
+    if (!body) {
+      body = JSON.stringify({});
+    }
+  }
+
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${AUTH_TOKEN}`,
-      ...(options.headers ?? {}),
-    },
+    headers,
+    body,
   });
 
   if (!res.ok) {
