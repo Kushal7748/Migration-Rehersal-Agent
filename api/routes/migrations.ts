@@ -97,7 +97,7 @@ export async function migrationRoutes(fastify: FastifyInstance) {
 
       const result = await query(
         `SELECT * FROM migration_requests
-         WHERE ($1::text IS NULL OR status = $1)
+         WHERE ($1::text IS NULL OR status = $1::migration_state)
          ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
         [qs.status ?? null, limit, offset]
       );
