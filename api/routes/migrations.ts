@@ -218,11 +218,12 @@ export async function migrationRoutes(fastify: FastifyInstance) {
       }
 
       const migRow = migration.rows[0] as Record<string, unknown>;
-      if (migRow["status"] !== "AWAITING_APPROVAL") {
+      const allowedStates = ["EVIDENCE_READY", "AWAITING_APPROVAL"];
+      if (!allowedStates.includes(migRow["status"] as string)) {
         return reply.status(409).send({
           error: {
             code: "INVALID_STATE_TRANSITION",
-            message: `Migration is in state ${migRow["status"]}, expected AWAITING_APPROVAL`,
+            message: `Migration is in state ${migRow["status"]}, expected EVIDENCE_READY or AWAITING_APPROVAL`,
           },
         });
       }
